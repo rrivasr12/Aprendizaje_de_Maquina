@@ -1,0 +1,34 @@
+[
+  {
+    "Modelo": "Red Neuronal Profunda (MLP Deep Learning)",
+    "MSE": 12333579.86,
+    "RMSE": 3511.92,
+    "MAE": 1990.4,
+    "R2": 0.9758,
+    "Tiempo_Entrenamiento_s": 113.42
+  },
+  {
+    "Modelo": "Ridge Regression (Baseline)",
+    "MSE": 44444162.25,
+    "RMSE": 6666.65,
+    "MAE": 4528.72,
+    "R2": 0.9129,
+    "Tiempo_Entrenamiento_s": 0.1
+  },
+  {
+    "Modelo": "Random Forest Regressor (Tuned)",
+    "MSE": 11807573.49,
+    "RMSE": 3436.21,
+    "MAE": 1784.55,
+    "R2": 0.9769,
+    "Tiempo_Entrenamiento_s": 27.85
+  },
+  {
+    "Modelo": "Gradient Boosting Regressor (Tuned)",
+    "MSE": 16502214.86,
+    "RMSE": 4062.29,
+    "MAE": 2361.06,
+    "R2": 0.9677,
+    "Tiempo_Entrenamiento_s": 73.04
+  }
+]

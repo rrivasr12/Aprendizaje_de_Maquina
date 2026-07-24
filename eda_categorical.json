@@ -1,0 +1,177 @@
+{
+  "airline": {
+    "cardinality": 6,
+    "distribution": {
+      "Vistara": {
+        "count": 127859,
+        "percentage": 42.6
+      },
+      "Air_India": {
+        "count": 80892,
+        "percentage": 26.95
+      },
+      "Indigo": {
+        "count": 43120,
+        "percentage": 14.37
+      },
+      "GO_FIRST": {
+        "count": 23173,
+        "percentage": 7.72
+      },
+      "AirAsia": {
+        "count": 16098,
+        "percentage": 5.36
+      },
+      "SpiceJet": {
+        "count": 9011,
+        "percentage": 3.0
+      }
+    }
+  },
+  "source_city": {
+    "cardinality": 6,
+    "distribution": {
+      "Delhi": {
+        "count": 61343,
+        "percentage": 20.44
+      },
+      "Mumbai": {
+        "count": 60896,
+        "percentage": 20.29
+      },
+      "Bangalore": {
+        "count": 52061,
+        "percentage": 17.34
+      },
+      "Kolkata": {
+        "count": 46347,
+        "percentage": 15.44
+      },
+      "Hyderabad": {
+        "count": 40806,
+        "percentage": 13.6
+      },
+      "Chennai": {
+        "count": 38700,
+        "percentage": 12.89
+      }
+    }
+  },
+  "departure_time": {
+    "cardinality": 6,
+    "distribution": {
+      "Morning": {
+        "count": 71146,
+        "percentage": 23.7
+      },
+      "Early_Morning": {
+        "count": 66790,
+        "percentage": 22.25
+      },
+      "Evening": {
+        "count": 65102,
+        "percentage": 21.69
+      },
+      "Night": {
+        "count": 48015,
+        "percentage": 16.0
+      },
+      "Afternoon": {
+        "count": 47794,
+        "percentage": 15.92
+      },
+      "Late_Night": {
+        "count": 1306,
+        "percentage": 0.44
+      }
+    }
+  },
+  "stops": {
+    "cardinality": 3,
+    "distribution": {
+      "one": {
+        "count": 250863,
+        "percentage": 83.58
+      },
+      "zero": {
+        "count": 36004,
+        "percentage": 12.0
+      },
+      "two_or_more": {
+        "count": 13286,
+        "percentage": 4.43
+      }
+    }
+  },
+  "arrival_time": {
+    "cardinality": 6,
+    "distribution": {
+      "Night": {
+        "count": 91538,
+        "percentage": 30.5
+      },
+      "Evening": {
+        "count": 78323,
+        "percentage": 26.09
+      },
+      "Morning": {
+        "count": 62735,
+        "percentage": 20.9
+      },
+      "Afternoon": {
+        "count": 38139,
+        "percentage": 12.71
+      },
+      "Early_Morning": {
+        "count": 15417,
+        "percentage": 5.14
+      },
+      "Late_Night": {
+        "count": 14001,
+        "percentage": 4.66
+      }
+    }
+  },
+  "destination_city": {
+    "cardinality": 6,
+    "distribution": {
+      "Mumbai": {
+        "count": 59097,
+        "percentage": 19.69
+      },
+      "Delhi": {
+        "count": 57360,
+        "percentage": 19.11
+      },
+      "Bangalore": {
+        "count": 51068,
+        "percentage": 17.01
+      },
+      "Kolkata": {
+        "count": 49534,
+        "percentage": 16.5
+      },
+      "Hyderabad": {
+        "count": 42726,
+        "percentage": 14.23
+      },
+      "Chennai": {
+        "count": 40368,
+        "percentage": 13.45
+      }
+    }
+  },
+  "class": {
+    "cardinality": 2,
+    "distribution": {
+      "Economy": {
+        "count": 206666,
+        "percentage": 68.85
+      },
+      "Business": {
+        "count": 93487,
+        "percentage": 31.15
+      }
+    }
+  }
+}

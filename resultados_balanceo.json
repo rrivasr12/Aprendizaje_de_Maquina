@@ -1,0 +1,26 @@
+[
+  {
+    "Estrategia": "Sin Balanceo (Baseline)",
+    "Accuracy": 0.689,
+    "Precision": 0.5014,
+    "Recall": 0.2832,
+    "F1-Score": 0.3619,
+    "Muestras_Entrenamiento": 240122
+  },
+  {
+    "Estrategia": "Sobremuestreo (RandomOverSampler)",
+    "Accuracy": 0.6403,
+    "Precision": 0.4637,
+    "Recall": 0.9878,
+    "F1-Score": 0.6311,
+    "Muestras_Entrenamiento": 330666
+  },
+  {
+    "Estrategia": "Submuestreo (RandomUnderSampler)",
+    "Accuracy": 0.6404,
+    "Precision": 0.4637,
+    "Recall": 0.9878,
+    "F1-Score": 0.6311,
+    "Muestras_Entrenamiento": 149578
+  }
+]

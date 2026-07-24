@@ -1,0 +1,6 @@
+{
+  "num_features": 30,
+  "train_samples": 210107,
+  "val_samples": 45023,
+  "test_samples": 45023
+}

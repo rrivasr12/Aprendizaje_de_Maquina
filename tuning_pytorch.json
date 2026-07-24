@@ -1,0 +1,26 @@
+[
+  {
+    "Configuración": "Red Neuronal Principal (128-64-32, lr=0.001)",
+    "Épocas": 39,
+    "Train_MSE": 0.0115,
+    "Val_MSE": 0.0117,
+    "Val_RMSE_Rupias": 2435.88,
+    "Tiempo_s": 113.42
+  },
+  {
+    "Configuración": "Exp. B (Tasa Aprendizaje 0.005)",
+    "Épocas": 39,
+    "Train_MSE": 0.0127,
+    "Val_MSE": 0.0132,
+    "Val_RMSE_Rupias": 2557.68,
+    "Tiempo_s": 113.42
+  },
+  {
+    "Configuración": "Exp. C (Capas 256-128-64)",
+    "Épocas": 39,
+    "Train_MSE": 0.0104,
+    "Val_MSE": 0.0108,
+    "Val_RMSE_Rupias": 2314.09,
+    "Tiempo_s": 113.42
+  }
+]
