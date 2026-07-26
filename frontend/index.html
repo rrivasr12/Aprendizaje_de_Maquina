@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirPrice ML — Plataforma de Inferencia, SHAP y Monitoreo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Header Navigation -->
+        <header class="app-header glass-card">
+            <div class="header-brand">
+                <div class="brand-logo">✈️</div>
+                <div class="brand-title">
+                    <h1>AirPrice <span class="badge-tag">ML Intelligence</span></h1>
+                    <p class="subtitle">Predicción Dinámica, Explicabilidad SHAP y Telemetría en Tiempo Real</p>
+                </div>
+            </div>
+
+            <div class="header-status">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot green-pulse"></span>
+                    <span class="status-text" id="statusText">Backend Conectado</span>
+                </div>
+                <div class="institution-badge">UNAB ACIF104 — Grupo 1</div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs glass-card">
+            <button class="nav-btn active" data-tab="tab-predict">
+                <span class="icon">📊</span> Cotizador de Tarifas
+            </button>
+            <button class="nav-btn" data-tab="tab-shap">
+                <span class="icon">🔍</span> Explicabilidad SHAP
+            </button>
+            <button class="nav-btn" data-tab="tab-telemetry">
+                <span class="icon">⚡</span> Telemetría & Monitoreo
+            </button>
+            <button class="nav-btn" data-tab="tab-benchmark">
+                <span class="icon">🏆</span> Benchmarks & EDA
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            <!-- TAB 1: PREDICTOR -->
+            <section id="tab-predict" class="tab-pane active">
+                <div class="grid-2col">
+                    <!-- Form Input Card -->
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h2>Parámetros del Itinerario</h2>
+                            <p>Seleccione origen, destino y tipo de vuelo para calcular la duración y tarifa automáticamente.</p>
+                        </div>
+                        <form id="predictionForm" class="form-grid">
+                            <div class="form-group">
+                                <label for="source_city">Ciudad de Origen</label>
+                                <select id="source_city" required>
+                                    <option value="Delhi" selected>Delhi (DEL)</option>
+                                    <option value="Mumbai">Mumbai (BOM)</option>
+                                    <option value="Bangalore">Bangalore (BLR)</option>
+                                    <option value="Kolkata">Kolkata (CCU)</option>
+                                    <option value="Hyderabad">Hyderabad (HYD)</option>
+                                    <option value="Chennai">Chennai (MAA)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="destination_city">Ciudad de Destino</label>
+                                <select id="destination_city" required>
+                                    <option value="Mumbai" selected>Mumbai (BOM)</option>
+                                    <option value="Bangalore">Bangalore (BLR)</option>
+                                    <option value="Kolkata">Kolkata (CCU)</option>
+                                    <option value="Hyderabad">Hyderabad (HYD)</option>
+                                    <option value="Chennai">Chennai (MAA)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group full-width swap-row">
+                                <button type="button" class="btn-swap" id="btnSwapCities">
+                                    🔄 Intercambiar Origen y Destino
+                                </button>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="airline">Aerolínea</label>
+                                <select id="airline" required>
+                                    <option value="Vistara" selected>Vistara</option>
+                                    <option value="Air_India">Air India</option>
+                                    <option value="Indigo">IndiGo</option>
+                                    <option value="GO_FIRST">GO FIRST</option>
+                                    <option value="AirAsia">AirAsia</option>
+                                    <option value="SpiceJet">SpiceJet</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="class_name">Clase de Cabina</label>
+                                <select id="class_name" required>
+                                    <option value="Economy" selected>Economy (Económica)</option>
+                                    <option value="Business">Business (Ejecutiva)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="departure_time">Horario de Salida</label>
+                                <select id="departure_time" required>
+                                    <option value="Morning" selected>Mañana (Morning)</option>
+                                    <option value="Early_Morning">Madrugada (Early Morning)</option>
+                                    <option value="Evening">Tarde/Noche (Evening)</option>
+                                    <option value="Night">Noche (Night)</option>
+                                    <option value="Afternoon">Mediodía (Afternoon)</option>
+                                    <option value="Late_Night">Trasnoche (Late Night)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="arrival_time">Horario de Llegada</label>
+                                <select id="arrival_time" required>
+                                    <option value="Night" selected>Noche (Night)</option>
+                                    <option value="Evening">Tarde/Noche (Evening)</option>
+                                    <option value="Morning">Mañana (Morning)</option>
+                                    <option value="Afternoon">Mediodía (Afternoon)</option>
+                                    <option value="Early_Morning">Madrugada (Early Morning)</option>
+                                    <option value="Late_Night">Trasnoche (Late Night)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="stops">Número de Escalas</label>
+                                <select id="stops" required>
+                                    <option value="one" selected>1 Escala (One Stop)</option>
+                                    <option value="zero">Sin Escalas (Directo)</option>
+                                    <option value="two_or_more">2 o más Escalas</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="days_left">Anticipación: <strong id="daysVal" class="cyan-text">15</strong> días previos</label>
+                                <input type="range" id="days_left" min="1" max="49" value="15">
+                            </div>
+
+                            <!-- Automatic Read-Only Duration Card -->
+                            <div class="form-group full-width">
+                                <label>Duración Estimada del Vuelo</label>
+                                <div class="auto-duration-box">
+                                    <div class="duration-left">
+                                        <span class="d-icon">⏱️</span>
+                                        <span class="d-text"><strong id="durationDisplay">6,5</strong> horas de vuelo</span>
+                                    </div>
+                                    <span class="d-badge">⚡ Calculado automáticamente según ruta y escalas</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary full-width" id="btnPredict">
+                                🚀 Estimar Tarifa del Vuelo
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Output Prediction Card -->
+                    <div class="card glass-card display-card">
+                        <div class="card-header">
+                            <h2>Resultado de Inferencia</h2>
+                            <span class="chip-badge cyan">Modelo: Random Forest (Tuned)</span>
+                        </div>
+
+                        <div class="result-box">
+                            <div class="result-label">Tarifa Estimada de Pasaje</div>
+                            <div class="result-price" id="resPriceINR">₹ 5.953,00</div>
+                            <div class="result-currency-group">
+                                <span class="currency-badge">≈ USD $<span id="resPriceUSD">71,44</span></span>
+                                <span class="currency-badge">≈ CLP $<span id="resPriceCLP">68.460</span></span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-mini-grid">
+                            <div class="mini-metric">
+                                <span class="m-label">Latencia Inferencia</span>
+                                <span class="m-value highlight" id="resLatency">12.4 ms</span>
+                            </div>
+                            <div class="mini-metric">
+                                <span class="m-label">Cumplimiento RNF-02</span>
+                                <span class="m-value green" id="resRnf02">✔ &lt; 200 ms</span>
+                            </div>
+                            <div class="mini-metric">
+                                <span class="m-label">Precisión Modelo R²</span>
+                                <span class="m-value" id="resR2">0,9769</span>
+                            </div>
+                            <div class="mini-metric">
+                                <span class="m-label">Error Medio RMSE</span>
+                                <span class="m-value" id="resRMSE">₹ 3.436</span>
+                            </div>
+                        </div>
+
+                        <div class="explanation-teaser">
+                            <p>💡 <strong>Explicabilidad disponible:</strong> Los atributos <em>clase de cabina</em> y <em>días previos a la compra</em> son los principales determinantes de este valor.</p>
+                            <button class="btn-secondary" id="btnGoToShap">Ver Descomposición SHAP →</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: EXPLICABILIDAD SHAP -->
+            <section id="tab-shap" class="tab-pane">
+                <div class="card glass-card">
+                    <div class="card-header">
+                        <h2>Descomposición de Atribución de Variables (SHAP Values)</h2>
+                        <p>Análisis interpretativo transparente que explica la contribución exacta (+ / -) de cada atributo sobre el precio predicho.</p>
+                    </div>
+
+                    <div class="shap-container">
+                        <div class="shap-summary-box">
+                            <div class="shap-stat">
+                                <span class="s-label">Precio Base Promedio:</span>
+                                <span class="s-val" id="shapBasePrice">₹ 20.889,00</span>
+                            </div>
+                            <div class="shap-stat">
+                                <span class="s-label">Precio Predicho Actual:</span>
+                                <span class="s-val highlight" id="shapTargetPrice">₹ 5.953,00</span>
+                            </div>
+                        </div>
+
+                        <div class="shap-chart-card">
+                            <h3>Impacto por Característica en el Precio Final</h3>
+                            <div id="shapBarsContainer" class="shap-bars-list">
+                                <!-- Dynamic SHAP Bars populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: TELEMETRIA & MONITOREO -->
+            <section id="tab-telemetry" class="tab-pane">
+                <div class="grid-3col">
+                    <div class="card glass-card metric-card">
+                        <div class="m-icon">⚡</div>
+                        <div class="m-title">Latencia Promedio (RNF-02)</div>
+                        <div class="m-big-num green-text" id="telemetryAvgLat">12.4 ms</div>
+                        <div class="m-subtext">Meta de Latencia &lt; 200 ms: <strong class="green-text">Cumplido ✔</strong></div>
+                    </div>
+
+                    <div class="card glass-card metric-card">
+                        <div class="m-icon">📈</div>
+                        <div class="m-title">Total Peticiones Servidas</div>
+                        <div class="m-big-num cyan-text" id="telemetryTotalReq">1</div>
+                        <div class="m-subtext">Monitoreo activo en producción</div>
+                    </div>
+
+                    <div class="card glass-card metric-card">
+                        <div class="m-icon">🛡️</div>
+                        <div class="m-title">Estado de Salud del Sistema</div>
+                        <div class="m-big-num green-text" id="telemetryHealth">Óptimo</div>
+                        <div class="m-subtext">Disponibilidad 99.99%</div>
+                    </div>
+                </div>
+
+                <div class="card glass-card margin-top">
+                    <div class="card-header">
+                        <h2>Matriz de Requisitos No Funcionales (RNF)</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Requisito</th>
+                                    <th>Categoría</th>
+                                    <th>Criterio de Aceptación</th>
+                                    <th>Valor Medido</th>
+                                    <th>Estado de Cumplimiento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>RNF-01</strong></td>
+                                    <td>Precisión del Modelo</td>
+                                    <td>Coeficiente R² ≥ 0,90 y RMSE &lt; 15% del rango</td>
+                                    <td>R² = 0,9769 | RMSE = ₹ 3.436</td>
+                                    <td><span class="badge-status success">CUMPLIDO EXCELENTE</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>RNF-02</strong></td>
+                                    <td>Latencia en Tiempo Real</td>
+                                    <td>Tiempo de respuesta de inferencia &lt; 200 ms</td>
+                                    <td>12,4 ms (Medio)</td>
+                                    <td><span class="badge-status success">CUMPLIDO EXCELENTE</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>RNF-03</strong></td>
+                                    <td>Blindaje Data Leakage</td>
+                                    <td>Ajuste exclusivo de transformadores en conjunto Train</td>
+                                    <td>0% Fuga de Información</td>
+                                    <td><span class="badge-status success">CUMPLIDO EXCELENTE</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: BENCHMARK & EDA -->
+            <section id="tab-benchmark" class="tab-pane">
+                <div class="card glass-card">
+                    <div class="card-header">
+                        <h2>Comparativa Final de Modelos ML vs Deep Learning</h2>
+                        <p>Resultados medidos rigurosamente sobre el conjunto de prueba intocado (Test Set - 45.023 muestras).</p>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Modelo / Arquitectura</th>
+                                    <th>Tipo de Técnica</th>
+                                    <th>MSE (₹²)</th>
+                                    <th>RMSE (₹)</th>
+                                    <th>MAE (₹)</th>
+                                    <th>R² Score</th>
+                                    <th>Tiempo Entren.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="highlight-row">
+                                    <td><strong>Random Forest Regressor (Tuned)</strong> ⭐</td>
+                                    <td>Machine Learning</td>
+                                    <td>11.807.573,49</td>
+                                    <td>₹ 3.436,21</td>
+                                    <td>₹ 1.784,55</td>
+                                    <td><strong>0,9769</strong></td>
+                                    <td>34,6 s</td>
+                                </tr>
+                                <tr>
+                                    <td>Extra Trees Regressor (Tuned)</td>
+                                    <td>Machine Learning</td>
+                                    <td>12.564.052,14</td>
+                                    <td>₹ 3.544,58</td>
+                                    <td>₹ 1.863,95</td>
+                                    <td>0,9754</td>
+                                    <td>47,8 s</td>
+                                </tr>
+                                <tr>
+                                    <td>Red Neuronal Profunda (MLP Standard)</td>
+                                    <td>Deep Learning</td>
+                                    <td>12.568.174,89</td>
+                                    <td>₹ 3.545,16</td>
+                                    <td>₹ 1.956,02</td>
+                                    <td><strong>0,9754</strong></td>
+                                    <td>111,3 s</td>
+                                </tr>
+                                <tr>
+                                    <td>Gradient Boosting Regressor (Tuned)</td>
+                                    <td>Machine Learning</td>
+                                    <td>16.502.214,86</td>
+                                    <td>₹ 4.062,29</td>
+                                    <td>₹ 2.361,06</td>
+                                    <td>0,9677</td>
+                                    <td>93,7 s</td>
+                                </tr>
+                                <tr>
+                                    <td>Ridge Regression (Baseline)</td>
+                                    <td>Machine Learning Lineal</td>
+                                    <td>44.444.162,25</td>
+                                    <td>₹ 6.666,65</td>
+                                    <td>₹ 4.528,72</td>
+                                    <td>0,9129</td>
+                                    <td>0,1 s</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
