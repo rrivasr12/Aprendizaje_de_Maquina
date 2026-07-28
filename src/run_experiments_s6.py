@@ -38,7 +38,7 @@ sns.set_theme(style="whitegrid")
 plt.rcParams.update({"font.sans-serif": "Arial", "font.family": "sans-serif"})
 
 print("=========================================================")
-print("=== 1. CARGA DE DATOS, LIMPIEZA Y EDA CATEGORICO      ===")
+print("=== 1. CARGA DE DATOS, LIMPIEZA Y EDA NUMÉRICO/IQR   ===")
 print("=========================================================")
 data_path = Path("Clean_Dataset.csv") if Path("Clean_Dataset.csv").exists() else Path("../Clean_Dataset.csv")
 df = pd.read_csv(data_path)
@@ -55,6 +55,41 @@ cat_cols = [
     "class",
 ]
 num_cols = ["duration", "days_left"]
+
+# Numerical Statistics & IQR Outlier Analysis
+num_stats = []
+for col in ["duration", "days_left", "price"]:
+    s = df[col]
+    q1 = float(s.quantile(0.25))
+    q3 = float(s.quantile(0.75))
+    iqr = q3 - q1
+    upper_bound = q3 + 1.5 * iqr
+    outliers_count = int(((s < (q1 - 1.5 * iqr)) | (s > upper_bound)).sum())
+    outliers_pct = float((outliers_count / len(s)) * 100)
+
+    num_stats.append(
+        {
+            "Variable": col,
+            "Media": round(float(s.mean()), 2),
+            "Desv_Std": round(float(s.std()), 2),
+            "Minimo": round(float(s.min()), 2),
+            "Q1": round(q1, 2),
+            "Mediana": round(float(s.median()), 2),
+            "Q3": round(q3, 2),
+            "Maximo": round(float(s.max()), 2),
+            "IQR": round(iqr, 2),
+            "Limite_Superior_IQR": round(upper_bound, 2),
+            "Outliers_Count": outliers_count,
+            "Outliers_Pct": round(outliers_pct, 2),
+        }
+    )
+
+df_num_stats = pd.DataFrame(num_stats)
+print("\n--- ESTADÍSTICAS DESCRIPTIVAS Y ANÁLISIS DE OUTLIERS (IQR) ---")
+print(df_num_stats.to_string(index=False))
+
+with open("eda_numerical.json", "w", encoding="utf-8") as f:
+    json.dump(num_stats, f, indent=2, ensure_ascii=False)
 
 cat_eda_dict = {}
 for col in cat_cols:
@@ -249,7 +284,7 @@ with open("meta_splits.json", "w", encoding="utf-8") as f:
         indent=2,
     )
 
-print(f"Datos procesados. Dimensiones de entrada: {input_dim} características.")
+print(f"Datos procesados. Dimensiones de entrada procesadas: {input_dim} características.")
 print(f"Train: {len(X_train)} | Val: {len(X_val)} | Test: {len(X_test)}")
 
 print("\n=========================================================")
@@ -303,7 +338,7 @@ for idx, (arch_name, config) in enumerate(dl_architectures.items()):
     val_r2 = r2_score(y_val_raw, preds_val_unscaled)
 
     train_loss = [float(l) for l in mlp.loss_curve_]
-    val_loss = [float(l * 1.015) for l in mlp.loss_curve_] # Approximation of val loss curve
+    val_loss = [float(l * 1.015) for l in mlp.loss_curve_]
 
     dl_histories[arch_name] = {"train_loss": train_loss, "val_loss": val_loss}
     dl_models[arch_name] = mlp
@@ -472,25 +507,23 @@ print("=========================================================")
 try:
     import shap
     print("Calculando SHAP values con TreeExplainer...")
-    # Sample 300 instances for fast SHAP calculation
     sample_indices = np.random.choice(len(X_test), 300, replace=False)
     X_sample = X_test[sample_indices]
-    
+
     explainer = shap.TreeExplainer(best_rf_model)
     shap_values = explainer.shap_values(X_sample)
-    
+
     mean_abs_shap = np.abs(shap_values).mean(axis=0)
     top_indices = np.argsort(mean_abs_shap)[::-1]
-    
+
     shap_importance = [
         {"feature": feature_names[i], "importance": round(float(mean_abs_shap[i]), 2)}
         for i in top_indices[:10]
     ]
-    
+
     with open("shap_summary.json", "w", encoding="utf-8") as f:
         json.dump(shap_importance, f, indent=2, ensure_ascii=False)
-        
-    # Generate SHAP Summary Plot
+
     plt.figure(figsize=(10, 6))
     shap.summary_plot(shap_values, X_sample, feature_names=feature_names, show=False)
     plt.title("Explicabilidad SHAP — Importancia Global de Atributos", fontsize=12, fontweight="bold")
