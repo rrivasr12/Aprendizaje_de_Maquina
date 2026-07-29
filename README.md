@@ -20,10 +20,11 @@ Aprendizaje_de_Maquina-master/
 ├── notebooks/                     <-- 📓 Análisis de Datos y Modelos (Jupyter Notebooks)
 │   ├── analisis_s2f2_fase1.ipynb   (EDA Categórico e Histograma Target)
 │   ├── analisis_s3f3_fase2.ipynb   (Modelos Baseline y Balanceo de Clases)
-│   └── analisis_s4f4_fase3.ipynb   (Deep Learning, Tuning de Modelos y SHAP)
+│   ├── analisis_s4f4_fase3.ipynb   (Deep Learning, Tuning de Modelos y SHAP)
+│   └── analisis_s4f4_fase4.ipynb   (Análisis Fase 4 Final: EDA numérico, IQR, 4 ML vs 3 DL y SHAP)
 │
 ├── src/                           <-- 🐍 Código Fuente de Experimentos ML/DL
-│   ├── run_experiments_s6.py       (Script principal: 4 ML, 3 DL, 4 balanceos, SHAP)
+│   ├── run_experiments_s6.py       (Script principal: 4 ML, 3 DL, 4 balanceos, IQR y SHAP)
 │   └── create_notebook.py          (Utilidad generadora de notebooks)
 │
 ├── backend/                       <-- ⚡ Proyecto Backend (API REST en FastAPI)
@@ -38,9 +39,9 @@ Aprendizaje_de_Maquina-master/
 ├── models/                        <-- 💾 Modelos Guardados para Inferencia en Vivo
 │   ├── best_rf_model.joblib        (Modelo principal Random Forest Regressor - Tuned)
 │   ├── best_mlp_model.joblib       (Modelo secundario Deep Learning MLP Standard)
-│   ├── preprocessor.joblib         (Transformer One-Hot & StandardScaler)
+│   ├── preprocessor.joblib         (Transformer One-Hot drop='first' & StandardScaler)
 │   ├── y_scaler.joblib             (Escalador Z del Target Price)
-│   └── feature_names.json          (Nombres de características procesadas)
+│   └── feature_names.json          (Nombres de las 30 características procesadas)
 │
 ├── Clean_Dataset.csv              (Dataset procesado de 300.153 vuelos comerciales)
 ├── run_system.py                  (Lanzador de 1 solo comando: Backend + Frontend)
@@ -48,6 +49,48 @@ Aprendizaje_de_Maquina-master/
 ├── README.md                      (Documentación oficial del repositorio en GitHub)
 └── .gitignore                     (Filtro de archivos temporales)
 ```
+
+---
+
+## 📈 Análisis Exploratorio de Datos Numérico y Outliers (IQR)
+
+### 📊 Tabla de Estadísticas Descriptivas
+| Variable | Media | Desv. Std | Mínimo | Q1 (25%) | Mediana | Q3 (75%) | Máximo |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **duration** (horas) | 12,22 h | 7,19 h | 0,83 h | 6,83 h | 11,25 h | 16,17 h | 49,83 h |
+| **days_left** (días) | 26,00 días | 13,56 días | 1,00 día | 15,00 días | 26,00 días | 38,00 días | 49,00 días |
+| **price** (Rupias ₹) | ₹ 20.889,66 | ₹ 22.697,77 | ₹ 1.105,00 | ₹ 4.783,00 | ₹ 7.425,00 | ₹ 42.521,00 | ₹ 123.071,00 |
+
+### 🔍 Análisis Formal de Outliers (Método IQR)
+- **Rango Intercuartílico**: $\text{IQR} = Q3 - Q1 = 42.521 - 4.783 = 37.738\text{ Rupias (₹)}$.
+- **Límite Superior Estadístico**: $Q3 + 1,5 \times \text{IQR} = 42.521 + 1,5 \times 37.738 = 99.128\text{ Rupias (₹)}$.
+- **Muestras Atípicas Superiores**: 123 muestras ($0,04\%$ del dataset).
+- **Justificación Técnica**: Al desagregar por cabina, la media de **Economy** es ₹ 6.572 y la media de **Business** asciende a ₹ 52.540 (máximo ₹ 123.071). Los valores superiores a ₹ 99.128 representan tarifas reales ejecutivas de alta demanda reservadas cerca del despegue; conservarlos es indispensable para permitir al modelo estimar tarifas de primera categoría.
+
+---
+
+## 🛠️ Matriz de Requisitos del Sistema (RF y RNF Secuenciales)
+
+| ID Requisito | Dimensión Rúbrica | Descripción Técnica del Requisito | Criterio de Verificación |
+| :---: | :---: | :--- | :--- |
+| **RF-01** | Funcional | Predicción continua y dinámica de tarifas aéreas basada en atributos de itinerario. | Modelo RF/MLP genera precio predicho en Rupias (₹), USD y CLP. |
+| **RF-02** | Funcional | Preprocesamiento automatizado y codificación de características categóricas sin data leakage. | `ColumnTransformer` ejecuta estandarización Z-score y One-Hot Encoding. |
+| **RNF-01** | Usabilidad | Calculadora automática de duración estimada de vuelo según origen, destino y escalas. | Interfaz Web dinámica (JS) elimina entrada manual de duración. |
+| **RNF-02** | Explicabilidad | Atribución e interpretación transparente de variables en tiempo real mediante valores SHAP. | Endpoint `/api/explain` retorna descomposiciones SHAP ($+$ / $-$ en Rupias). |
+| **RNF-03** | Escalabilidad | Arquitectura desacoplada Backend REST en FastAPI / Frontend Web UI con inferencia asíncrona. | Frontend consume la API FastAPI mediante peticiones HTTP JSON. |
+| **RNF-04** | Confiabilidad | Precisión predictiva $R^2 \ge 0,90$ y ciego absoluto contra data leakage entre particiones. | $R^2 = 0,9769$ en Test Set intocado (70/15/15). |
+| **RNF-05** | Seguridad | Validación y sanitización estricta de parámetros de entrada mediante esquemas Pydantic. | Middleware FastAPI valida tipos y rangos, bloqueando inyecciones. |
+| **RNF-06** | Monitoreabilidad | Telemetría de desempeño y latencia en tiempo real expuesta en el endpoint `/api/metrics` ($< 200\text{ ms}$). | Middleware `X-Process-Time` reporta latencia media de 12,4 ms. |
+
+---
+
+## 🧠 Vector de Entrada (30 Neuronas) y Prevención de la Dummy Variable Trap
+
+- **Dummy Variable Trap**: Para evitar multicolinealidad perfecta en matrices de One-Hot Encoding, se configuró `OneHotEncoder(drop='first')`, eliminando la primera columna binaria de cada categoría como nivel de referencia.
+- **Vector de Entrada Procesado (30 Neuronas)**:
+  - 2 variables continuas escaladas con Z-score (`duration`, `days_left`).
+  - 28 variables binarias derivadas del One-Hot Encoder $[(6-1)+(6-1)+(6-1)+(3-1)+(6-1)+(6-1)+(2-1) = 28]$.
+- **Capa de Salida**: 1 neurona lineal sin activación acotada para la proyección del precio escalar continuo.
 
 ---
 
@@ -65,42 +108,26 @@ Aprendizaje_de_Maquina-master/
 
 ## 🧠 Arquitecturas de Deep Learning Evaluadas
 
-Se diseñaron y compararon 3 arquitecturas neuronales de Perceptrón Multicapa (MLP) utilizando `scikit-learn` / `PyTorch`:
-1. **DL Arch 1 (MLP Standard)**: Capas ocultas `(128, 64, 32)` con activación ReLU y regularización ($R^2 = 0,9754$).
-2. **DL Arch 2 (MLP Ancha)**: Capas ocultas `(256, 128, 64)` con alta capacidad de representación.
-3. **DL Arch 3 (MLP Profunda)**: Capas ocultas `(128, 128, 64, 32)` orientadas a extracción jerárquica.
+1. **DL Arch 1 (MLP Standard - Seleccionada)**: Capas ocultas `(128, 64, 32)` con ReLU, Dropout (`p=0,1`) y Batch Normalization ($R^2 = 0,9754$).
+2. **DL Arch 2 (MLP Ancha)**: Capas ocultas `(256, 128, 64)` para alta capacidad de representación.
+3. **DL Arch 3 (MLP Profunda)**: Capas ocultas `(128, 128, 64, 32)` para abstracciones jerárquicas multinivel.
 
 ---
 
-## ⚖️ Experimento de Balanceo de Clases
+## 🔍 Explicabilidad SHAP y Escenario Práctico
 
-En la tarea auxiliar de clasificación de cabina (Business vs Economy), se evaluó el impacto de 4 técnicas de balanceo (Sin Balanceo / Baseline, RandomOverSampler, RandomUnderSampler y SMOTE). El análisis empírico demostró que la clase Business no requiere balanceo forzado, ya que este desplaza el hiperplano lineal inflando falsos positivos.
-
----
-
-## ⏱️ Calculadora Automática de Duración por Ruta
-
-Atendiendo al principio de usabilidad, se eliminó la selección manual de duración de vuelo en la interfaz web. El sistema ahora **calcula automáticamente** la duración estimada en horas según:
-- Ciudad de Origen (Delhi, Mumbai, Bangalore, Kolkata, Hyderabad, Chennai).
-- Ciudad de Destino (excluyendo automáticamente la ciudad de origen).
-- Número de escalas (Directo, 1 Escala o 2+ Escalas).
-
----
-
-## 🔍 Explicabilidad SHAP (SHapley Additive exPlanations)
-
-El sistema integra valores SHAP mediante `TreeExplainer` para atribuir la contribución exacta ($+$ / $-$ en Rupias) de cada variable en las predicciones.
-- **Factor #1**: Clase de Cabina (Business añade $+\text{₹ } 25.000$ en promedio).
-- **Factor #2**: Días Restantes (compra a última hora incrementa significativamente el valor).
-- **Factor #3**: Duración del Vuelo y Aerolínea operadora.
+- **Escenario**: Cotización Vistara, Delhi ➔ Mumbai, Clase Business, 1 Escala, Horario Mañana, 15 días previos.
+- **Precio Base Promedio**: ₹ 20.889,00.
+- **Atribuciones SHAP**: `class_Business` ($+ \text{₹ } 25.000$), `days_left=15` ($+ \text{₹ } 2.700$), `airline_Vistara` ($+ \text{₹ } 1.200$), `stops_one` ($+ \text{₹ } 850$).
+- **Precio Predicho Final**: $\approx \text{₹ } 50.639,00$.
 
 ---
 
 ## 📡 Endpoints de la API REST (Backend FastAPI)
 
-- `POST /api/predict`: Recibe el itinerario del vuelo y retorna el precio estimado en Rupias (₹), USD ($) y CLP ($), junto a la latencia de respuesta ($\approx 12.4\text{ ms}$).
-- `POST /api/explain`: Retorna la descomposición explicativa SHAP de las características para la cotización actual.
-- `GET /api/metrics`: Endpoint de telemetría y monitoreo de desempeño (latencia media, peticiones totales, estado de salud y cumplimiento del RNF-02 $< 200\text{ ms}$).
+- `POST /api/predict`: Inferencia continua en tiempo real (retorna precio en ₹, USD, CLP y latencia).
+- `POST /api/explain`: Descomposición explicativa SHAP de las características.
+- `GET /api/metrics`: Telemetría operacional (latencia media 12,4 ms, peticiones totales, RNF-06 status y salud).
 - `GET /api/health`: Healthcheck básico del estado del servidor.
 
 ---
@@ -118,14 +145,9 @@ python run_system.py
 ```
 Este comando levanta el servidor FastAPI en `http://127.0.0.1:8000` y abre automáticamente la aplicación Web en tu navegador.
 
-### 3. Re-entrenar Modelos y Generar Benchmarks (Opcional)
+### 3. Ejecutar Pruebas Automatizadas del Backend
 ```bash
-python src/run_experiments_s6.py
-```
-
-### 4. Ejecutar Pruebas Automatizadas del Backend
-```bash
-pytest backend/test_api.py
+powershell -Command "$env:PYTHONPATH='.'; python -m pytest backend/test_api.py"
 ```
 
 ---
