@@ -337,8 +337,9 @@ for idx, (arch_name, config) in enumerate(dl_architectures.items()):
     val_rmse = np.sqrt(val_mse)
     val_r2 = r2_score(y_val_raw, preds_val_unscaled)
 
-    train_loss = [float(l) for l in mlp.loss_curve_]
-    val_loss = [float(l * 1.015) for l in mlp.loss_curve_]
+    preds_tr_scaled = mlp.predict(X_train)
+    train_loss = [float(mean_squared_error(y_train_scaled, preds_tr_scaled))]
+    val_loss = [float(mean_squared_error(y_val_scaled, preds_val_scaled))]
 
     dl_histories[arch_name] = {"train_loss": train_loss, "val_loss": val_loss}
     dl_models[arch_name] = mlp

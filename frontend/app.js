@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { code: "Chennai", name: "Chennai (MAA)" }
     ];
 
-    // Realistic flight durations by route & stops (hours)
+    // Realistic flight durations by route & stops (hours) (RNF-01)
     const ROUTE_DURATIONS = {
         "Delhi-Mumbai": { zero: 2.2, one: 6.5, two_or_more: 12.5 },
         "Delhi-Bangalore": { zero: 2.8, one: 7.5, two_or_more: 14.0 },
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("btnGoToShap")?.addEventListener("click", () => switchTab("tab-shap"));
 
-    // Dynamic Destination Filtering & Automatic Route Duration Calculation
+    // Dynamic Destination Filtering & Automatic Route Duration Calculation (RNF-01)
     const sourceSelect = document.getElementById("source_city");
     const destSelect = document.getElementById("destination_city");
     const stopsSelect = document.getElementById("stops");
@@ -159,12 +159,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("statusIndicator").classList.remove("offline");
             }
         } catch (e) {
-            document.getElementById("statusText").textContent = "Backend Inactivo / Reintentando";
+            document.getElementById("statusText").textContent = "Backend Inactivo";
+            document.getElementById("statusIndicator").classList.add("offline");
         }
     }
     checkHealth();
 
-    // Form Submit (Prediction)
+    // Form Submit (Prediction & Real SHAP)
     const predictionForm = document.getElementById("predictionForm");
     predictionForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -178,7 +179,8 @@ document.addEventListener("DOMContentLoaded", () => {
             arrival_time: document.getElementById("arrival_time").value,
             stops: stopsSelect.value,
             days_left: parseInt(daysSlider.value),
-            duration: currentCalculatedDuration, // Automatically computed from route!
+            duration: currentCalculatedDuration,
+            model_type: document.getElementById("model_type")?.value || "rf",
         };
 
         const btnPredict = document.getElementById("btnPredict");
@@ -199,9 +201,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("resPriceUSD").textContent = data.predicted_price_usd.toLocaleString("es-CL");
                 document.getElementById("resPriceCLP").textContent = data.predicted_price_clp.toLocaleString("es-CL");
                 document.getElementById("resLatency").textContent = `${data.latency_ms} ms`;
+                const modelBadge = document.getElementById("resModelUsed");
+                if (modelBadge) modelBadge.textContent = `Modelo: ${data.model_used}`;
             }
 
-            // SHAP Explain API Call
+            // Real SHAP Explain API Call (RNF-02)
             const explainRes = await fetch(`${API_BASE}/api/explain`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -213,24 +217,32 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderShapBars(shapData);
             }
 
-            // Update Telemetry
+            // Update Telemetry (RNF-03 / RNF-06)
             updateTelemetry();
 
         } catch (err) {
-            console.error("Error al calcular inferencia:", err);
+            console.error("Error al ejecutar inferencia:", err);
         } finally {
             btnPredict.textContent = "🚀 Estimar Tarifa del Vuelo";
             btnPredict.disabled = false;
         }
     });
 
-    // Render SHAP Waterfall Bars
+    // Render SHAP Waterfall / Breakdown Bars (Real TreeExplainer values)
     function renderShapBars(shapData) {
         const container = document.getElementById("shapBarsContainer");
         container.innerHTML = "";
 
-        document.getElementById("shapBasePrice").textContent = `₹ ${shapData.base_price_inr.toLocaleString("es-CL")},00`;
-        document.getElementById("shapTargetPrice").textContent = `₹ ${shapData.predicted_price_inr.toLocaleString("es-CL")},00`;
+        const baseFormatted = Math.round(shapData.base_price_inr).toLocaleString("es-CL");
+        const targetFormatted = Math.round(shapData.predicted_price_inr).toLocaleString("es-CL");
+
+        document.getElementById("shapBasePrice").textContent = `₹ ${baseFormatted},00`;
+        document.getElementById("shapTargetPrice").textContent = `₹ ${targetFormatted},00`;
+
+        if (!shapData.contributions || shapData.contributions.length === 0) {
+            container.innerHTML = "<p>No hay atribuciones SHAP significativas para mostrar.</p>";
+            return;
+        }
 
         const maxContrib = Math.max(...shapData.contributions.map(c => Math.abs(c.contribution)), 1);
 
@@ -238,9 +250,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const row = document.createElement("div");
             row.className = "shap-item";
 
-            const percent = Math.min(100, Math.max(10, (Math.abs(item.contribution) / maxContrib) * 100));
+            const percent = Math.min(100, Math.max(12, (Math.abs(item.contribution) / maxContrib) * 100));
             const isIncrease = item.direction === "increases_price";
             const sign = isIncrease ? "+" : "-";
+            const formattedVal = Math.abs(Math.round(item.contribution)).toLocaleString("es-CL");
 
             row.innerHTML = `
                 <div class="shap-feature-name">${item.feature}</div>
@@ -248,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="shap-bar-fill ${isIncrease ? 'increase' : 'decrease'}" style="width: ${percent}%;"></div>
                 </div>
                 <div class="shap-val-text ${isIncrease ? 'increase' : 'decrease'}">
-                    ${sign} ₹ ${Math.abs(item.contribution).toLocaleString("es-CL")}
+                    ${sign} ₹ ${formattedVal}
                 </div>
             `;
 

@@ -31,7 +31,29 @@ def test_predict_endpoint():
         assert "latency_ms" in data
         assert data["status"] == "success"
     else:
-        # If models aren't trained yet, expect 500
+        assert response.status_code == 500
+
+
+def test_explain_endpoint():
+    payload = {
+        "airline": "Vistara",
+        "source_city": "Delhi",
+        "departure_time": "Morning",
+        "stops": "one",
+        "arrival_time": "Night",
+        "destination_city": "Mumbai",
+        "class": "Economy",
+        "duration": 2.5,
+        "days_left": 15,
+    }
+    response = client.post("/api/explain", json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        assert "base_price_inr" in data
+        assert "predicted_price_inr" in data
+        assert "contributions" in data
+        assert isinstance(data["contributions"], list)
+    else:
         assert response.status_code == 500
 
 
