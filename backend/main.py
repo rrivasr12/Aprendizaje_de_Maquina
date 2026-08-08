@@ -12,9 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-# Base Directory
+# Base Directory & Dynamic Models Path Resolution
 BASE_DIR = Path(__file__).resolve().parent.parent
-MODELS_DIR = BASE_DIR / "models"
+MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 
 # App Initialization
 app = FastAPI(
@@ -57,6 +57,7 @@ def load_artifacts():
     global preprocessor, y_scaler, rf_model, mlp_model, feature_names, explainer
     if preprocessor is None:
         try:
+            # Carga de modelos resuelta dinámicamente desde /models
             preprocessor = joblib.load(MODELS_DIR / "preprocessor.joblib")
             y_scaler = joblib.load(MODELS_DIR / "y_scaler.joblib")
             rf_model = joblib.load(MODELS_DIR / "best_rf_model.joblib")
@@ -73,9 +74,9 @@ def load_artifacts():
             except Exception as se:
                 print(f"[AVISO] SHAP TreeExplainer init: {se}")
                 
-            print("[OK] Artefactos de modelos (Random Forest & MLP) cargados exitosamente.")
+            print(f"[OK] Artefactos de modelos cargados exitosamente desde {MODELS_DIR}.")
         except Exception as e:
-            print(f"Error cargando artefactos: {e}")
+            print(f"Error cargando artefactos desde {MODELS_DIR}: {e}")
 
 
 # Validaciones Pydantic
@@ -187,29 +188,38 @@ def predict_flight_price(input_data: FlightPredictionInput):
     if rf_model is None or preprocessor is None:
         raise HTTPException(status_code=500, detail="Los modelos no han sido cargados. Ejecute python scripts/train.py primero.")
 
-    input_dict = {
-        "airline": [input_data.airline],
-        "source_city": [input_data.source_city],
-        "departure_time": [input_data.departure_time],
-        "stops": [input_data.stops],
-        "arrival_time": [input_data.arrival_time],
-        "destination_city": [input_data.destination_city],
-        "class": [input_data.class_name],
-        "duration": [input_data.duration],
-        "days_left": [input_data.days_left],
-    }
+    try:
+        input_dict = {
+            "airline": [input_data.airline],
+            "source_city": [input_data.source_city],
+            "departure_time": [input_data.departure_time],
+            "stops": [input_data.stops],
+            "arrival_time": [input_data.arrival_time],
+            "destination_city": [input_data.destination_city],
+            "class": [input_data.class_name],
+            "duration": [input_data.duration],
+            "days_left": [input_data.days_left],
+        }
 
-    df_single = pd.DataFrame(input_dict)
-    X_proc = preprocessor.transform(df_single)
+        df_single = pd.DataFrame(input_dict)
+        
+        # Preprocesar la muestra
+        X_proc = preprocessor.transform(df_single)
 
-    # Seleccionar modelo de inferencia: Random Forest o Red Neuronal MLP
-    selected_model_name = "Random Forest Regressor (Tuned)"
-    if input_data.model_type in ["mlp", "neural_network", "mlp_regressor"] and mlp_model is not None:
-        pred_scaled = mlp_model.predict(X_proc)
-        pred_inr = float(y_scaler.inverse_transform(pred_scaled.reshape(-1, 1))[0][0])
-        selected_model_name = "Red Neuronal Profunda (MLPRegressor)"
-    else:
-        pred_inr = float(rf_model.predict(X_proc)[0])
+        # Seleccionar modelo de inferencia: Random Forest o Red Neuronal MLP
+        selected_model_name = "Random Forest Regressor (Tuned)"
+        if input_data.model_type in ["mlp", "neural_network", "mlp_regressor"] and mlp_model is not None:
+            pred_scaled = mlp_model.predict(X_proc)
+            pred_inr = float(y_scaler.inverse_transform(pred_scaled.reshape(-1, 1))[0][0])
+            selected_model_name = "Red Neuronal Profunda (MLPRegressor)"
+        else:
+            pred_inr = float(rf_model.predict(X_proc)[0])
+
+    except (ValueError, KeyError, AttributeError, Exception) as err:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Dato de entrada inválido o categoría no reconocida por el preprocesador: {str(err)}"
+        )
 
     pred_inr = max(0.0, pred_inr)
     latency_ms = (time.time() - t0) * 1000
@@ -243,21 +253,27 @@ def explain_flight_prediction(input_data: FlightPredictionInput):
     if rf_model is None or preprocessor is None:
         raise HTTPException(status_code=500, detail="Los modelos no están disponibles.")
 
-    input_dict = {
-        "airline": [input_data.airline],
-        "source_city": [input_data.source_city],
-        "departure_time": [input_data.departure_time],
-        "stops": [input_data.stops],
-        "arrival_time": [input_data.arrival_time],
-        "destination_city": [input_data.destination_city],
-        "class": [input_data.class_name],
-        "duration": [input_data.duration],
-        "days_left": [input_data.days_left],
-    }
-    df_single = pd.DataFrame(input_dict)
-    
-    # 1. Transformar input con el pipeline de scikit-learn
-    X_transformed = preprocessor.transform(df_single)
+    try:
+        input_dict = {
+            "airline": [input_data.airline],
+            "source_city": [input_data.source_city],
+            "departure_time": [input_data.departure_time],
+            "stops": [input_data.stops],
+            "arrival_time": [input_data.arrival_time],
+            "destination_city": [input_data.destination_city],
+            "class": [input_data.class_name],
+            "duration": [input_data.duration],
+            "days_left": [input_data.days_left],
+        }
+        df_single = pd.DataFrame(input_dict)
+        
+        # 1. Transformar input con el pipeline de scikit-learn
+        X_transformed = preprocessor.transform(df_single)
+    except (ValueError, KeyError, AttributeError, Exception) as err:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Dato de entrada inválido o categoría no reconocida por el preprocesador: {str(err)}"
+        )
 
     pred_inr = float(rf_model.predict(X_transformed)[0])
 
@@ -306,6 +322,8 @@ def explain_flight_prediction(input_data: FlightPredictionInput):
             contributions=contributions[:10],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error al calcular SHAP real: {e}")
         raise HTTPException(status_code=500, detail=f"Error al calcular valores SHAP reales: {str(e)}")

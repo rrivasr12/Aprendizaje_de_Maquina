@@ -22,6 +22,7 @@ def test_predict_endpoint():
         "class": "Economy",
         "duration": 2.5,
         "days_left": 15,
+        "model_type": "rf"
     }
     response = client.post("/api/predict", json=payload)
     if response.status_code == 200:
@@ -32,6 +33,23 @@ def test_predict_endpoint():
         assert data["status"] == "success"
     else:
         assert response.status_code == 500
+
+
+def test_predict_invalid_category_returns_422_or_400():
+    payload = {
+        "airline": "InvalidAirline",
+        "source_city": "Delhi",
+        "departure_time": "Morning",
+        "stops": "one",
+        "arrival_time": "Night",
+        "destination_city": "Mumbai",
+        "class": "Economy",
+        "duration": 2.5,
+        "days_left": 15,
+    }
+    response = client.post("/api/predict", json=payload)
+    # Pydantic or preprocessor error returns 422 or 400 instead of 500
+    assert response.status_code in [400, 422]
 
 
 def test_explain_endpoint():
