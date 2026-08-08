@@ -87,6 +87,14 @@
                                 </button>
                             </div>
 
+                            <div class="form-group full-width">
+                                <label for="model_type">Modelo de Inferencia (RF / Red Neuronal)</label>
+                                <select id="model_type" required>
+                                    <option value="rf" selected>Random Forest Regressor (Tuned - R² = 0.9769)</option>
+                                    <option value="mlp">Red Neuronal Profunda (MLPRegressor - R² = 0.9754)</option>
+                                </select>
+                            </div>
+
                             <div class="form-group">
                                 <label for="airline">Aerolínea</label>
                                 <select id="airline" required>
@@ -167,7 +175,7 @@
                     <div class="card glass-card display-card">
                         <div class="card-header">
                             <h2>Resultado de Inferencia</h2>
-                            <span class="chip-badge cyan">Modelo: Random Forest (Tuned)</span>
+                            <span class="chip-badge cyan" id="resModelUsed">Modelo: Random Forest (Tuned)</span>
                         </div>
 
                         <div class="result-box">
