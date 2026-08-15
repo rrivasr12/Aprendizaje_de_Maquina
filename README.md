@@ -201,7 +201,8 @@ Aprendizaje_de_Maquina-master/
 │   ├── analisis_s2f2_fase1.ipynb
 │   ├── analisis_s3f3_fase2.ipynb
 │   ├── analisis_s4f4_fase3.ipynb
-│   └── analisis_s4f4_fase4.ipynb
+│   ├── analisis_s4f4_fase4.ipynb
+│   └── analisis_s9s2_fase3.ipynb
 ├── scripts/
 │   ├── train.py             # Script ejecutable de entrenamiento reproducible end-to-end
 │   └── run_system.py        # Script orquestador del sistema (FastAPI + Frontend)
