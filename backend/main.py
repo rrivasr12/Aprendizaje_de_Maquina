@@ -1,7 +1,24 @@
+from contextlib import asynccontextmanager
+import json
 import os
+import sys
 import time
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+
+# Add short path hook for Windows MAX_PATH if needed
+if sys.platform == "win32":
+    import ctypes
+    def get_short_path(path):
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            res = ctypes.windll.kernel32.GetShortPathNameW(os.path.abspath(path), buf, 1024)
+            if res > 0:
+                return buf.value
+        except Exception:
+            pass
+        return path
+    sys.path[:] = [get_short_path(p) if p and os.path.exists(p) else p for p in sys.path]
 
 import joblib
 import numpy as np
@@ -10,27 +27,27 @@ import shap
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Base Directory & Dynamic Models Path Resolution
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 
-# App Initialization
-app = FastAPI(
-    title="Flight Price Prediction & Explainability API",
-    description="Backend API REST para predicción de tarifas aéreas con alternancia entre Random Forest y Red Neuronal MLP, explicabilidad SHAP real y monitoreo operacional.",
-    version="1.0.0",
-)
-
-# Enable CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Cargar métricas auditadas si existen
+default_r2 = 0.9785
+default_rmse = 3327.96
+default_mae = 1667.92
+metrics_json_path = MODELS_DIR / "training_metrics.json"
+if metrics_json_path.exists():
+    try:
+        with open(metrics_json_path, "r", encoding="utf-8") as f:
+            aud_data = json.load(f)
+            rf_test = aud_data.get("final_test_evaluation", {}).get("Random Forest", {})
+            default_r2 = rf_test.get("r2", default_r2)
+            default_rmse = rf_test.get("rmse", default_rmse)
+            default_mae = rf_test.get("mae", default_mae)
+    except Exception:
+        pass
 
 # Telemetry Metrics Storage
 system_metrics = {
@@ -38,9 +55,9 @@ system_metrics = {
     "total_explanations": 0,
     "latencies_ms": [],
     "model_name": "Random Forest Regressor (Tuned)",
-    "r2_score": 0.9769,
-    "rmse_inr": 3436.21,
-    "mae_inr": 1784.55,
+    "r2_score": default_r2,
+    "rmse_inr": default_rmse,
+    "mae_inr": default_mae,
     "start_time": time.time(),
 }
 
@@ -59,7 +76,8 @@ def load_artifacts():
         try:
             # Carga de modelos resuelta dinámicamente desde /models
             preprocessor = joblib.load(MODELS_DIR / "preprocessor.joblib")
-            y_scaler = joblib.load(MODELS_DIR / "y_scaler.joblib")
+            if (MODELS_DIR / "y_scaler.joblib").exists():
+                y_scaler = joblib.load(MODELS_DIR / "y_scaler.joblib")
             rf_model = joblib.load(MODELS_DIR / "best_rf_model.joblib")
             
             if (MODELS_DIR / "best_mlp_model.joblib").exists():
@@ -79,6 +97,29 @@ def load_artifacts():
             print(f"Error cargando artefactos desde {MODELS_DIR}: {e}")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_artifacts()
+    yield
+
+
+# App Initialization
+app = FastAPI(
+    title="Flight Price Prediction & Explainability API",
+    description="Backend API REST para predicción de tarifas aéreas con alternancia entre Random Forest y Red Neuronal MLP, explicabilidad SHAP real y monitoreo operacional.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Validaciones Pydantic
 VALID_AIRLINES = {"SpiceJet", "AirAsia", "Vistara", "GO_FIRST", "Indigo", "Air_India"}
 VALID_CITIES = {"Delhi", "Mumbai", "Bangalore", "Kolkata", "Hyderabad", "Chennai"}
@@ -88,16 +129,18 @@ VALID_CLASSES = {"Economy", "Business"}
 
 
 class FlightPredictionInput(BaseModel):
-    airline: str = Field(..., description="Nombre de la aerolínea", example="Vistara")
-    source_city: str = Field(..., description="Ciudad de origen", example="Delhi")
-    departure_time: str = Field(..., description="Horario de salida", example="Morning")
-    stops: str = Field(..., description="Número de escalas", example="one")
-    arrival_time: str = Field(..., description="Horario de llegada", example="Night")
-    destination_city: str = Field(..., description="Ciudad de destino", example="Mumbai")
-    class_name: str = Field(..., alias="class", description="Clase de cabina (Economy/Business)", example="Economy")
-    duration: float = Field(..., ge=0.1, le=50.0, description="Duración estimada del vuelo en horas", example=2.17)
-    days_left: int = Field(..., ge=1, le=50, description="Días de antelación de la reserva (1-50)", example=1)
-    model_type: Optional[str] = Field("rf", description="Modelo a usar: 'rf' (Random Forest) o 'mlp' (Red Neuronal MLP)", example="rf")
+    model_config = ConfigDict(populate_by_name=True)
+
+    airline: str = Field(..., description="Nombre de la aerolínea", json_schema_extra={"example": "Vistara"})
+    source_city: str = Field(..., description="Ciudad de origen", json_schema_extra={"example": "Delhi"})
+    departure_time: str = Field(..., description="Horario de salida", json_schema_extra={"example": "Morning"})
+    stops: str = Field(..., description="Número de escalas", json_schema_extra={"example": "one"})
+    arrival_time: str = Field(..., description="Horario de llegada", json_schema_extra={"example": "Night"})
+    destination_city: str = Field(..., description="Ciudad de destino", json_schema_extra={"example": "Mumbai"})
+    class_name: str = Field(..., alias="class", description="Clase de cabina (Economy/Business)", json_schema_extra={"example": "Economy"})
+    duration: float = Field(..., ge=0.1, le=50.0, description="Duración estimada del vuelo en horas", json_schema_extra={"example": 2.17})
+    days_left: int = Field(..., ge=1, le=50, description="Días de antelación de la reserva (1-50)", json_schema_extra={"example": 1})
+    model_type: Optional[str] = Field("rf", description="Modelo a usar: 'rf' (Random Forest) o 'mlp' (Red Neuronal MLP)", json_schema_extra={"example": "rf"})
 
     @field_validator("airline")
     def validate_airline(cls, v):
@@ -128,9 +171,6 @@ class FlightPredictionInput(BaseModel):
         if v not in VALID_CLASSES:
             raise ValueError(f"Clase no válida. Opciones permitidas: {VALID_CLASSES}")
         return v
-
-    class Config:
-        populate_by_name = True
 
 
 class FlightPredictionResponse(BaseModel):
@@ -165,13 +205,11 @@ async def track_latency(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
-def startup_event():
-    load_artifacts()
 
 
 @app.get("/api/health")
 def health_check():
+    load_artifacts()
     return {
         "status": "healthy",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),

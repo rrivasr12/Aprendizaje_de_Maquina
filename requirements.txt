@@ -9,3 +9,7 @@ shap
 matplotlib
 seaborn
 imbalanced-learn
+pytest
+httpx
+nbformat
+nbconvert

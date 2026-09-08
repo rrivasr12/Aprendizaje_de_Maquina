@@ -1,0 +1,159 @@
+{
+  "metadata": {
+    "timestamp": "2026-09-07 22:53:09",
+    "dataset": "Clean_Dataset.csv",
+    "train_samples": 210107,
+    "val_samples": 45023,
+    "test_samples": 45023,
+    "features_count": 30,
+    "random_state": 42
+  },
+  "traditional_models_validation_benchmark": {
+    "Ridge": {
+      "mse": 46581339.256,
+      "rmse": 6825.0523,
+      "mae": 4613.3235,
+      "r2": 0.9095,
+      "train_time_sec": 0.09
+    },
+    "Random Forest": {
+      "mse": 11015217.7276,
+      "rmse": 3318.9182,
+      "mae": 1670.0536,
+      "r2": 0.9786,
+      "train_time_sec": 26.23
+    },
+    "Extra Trees": {
+      "mse": 12061932.4227,
+      "rmse": 3473.0293,
+      "mae": 1783.9532,
+      "r2": 0.9766,
+      "train_time_sec": 36.97
+    },
+    "Gradient Boosting": {
+      "mse": 20258953.1064,
+      "rmse": 4500.9947,
+      "mae": 2647.1993,
+      "r2": 0.9606,
+      "train_time_sec": 45.19
+    }
+  },
+  "mlp_architectures_validation_benchmark": {
+    "Arch 1 (Standard 128-64-32)": {
+      "mse": 11519324.7794,
+      "rmse": 3394.0131,
+      "mae": 1848.7267,
+      "r2": 0.9776,
+      "stopped_epoch": 100,
+      "train_time_sec": 310.35,
+      "hidden_layers": [
+        128,
+        64,
+        32
+      ]
+    },
+    "Arch 2 (Ancha 256-128-64)": {
+      "mse": 9763073.8793,
+      "rmse": 3124.5918,
+      "mae": 1656.9102,
+      "r2": 0.981,
+      "stopped_epoch": 100,
+      "train_time_sec": 554.52,
+      "hidden_layers": [
+        256,
+        128,
+        64
+      ]
+    },
+    "Arch 3 (Profunda 128-128-64-32)": {
+      "mse": 10619617.9068,
+      "rmse": 3258.7755,
+      "mae": 1738.0913,
+      "r2": 0.9794,
+      "stopped_epoch": 79,
+      "train_time_sec": 402.5,
+      "hidden_layers": [
+        128,
+        128,
+        64,
+        32
+      ]
+    }
+  },
+  "selected_best_models": {
+    "best_traditional_model": "Random Forest",
+    "best_mlp_architecture": "Arch 2 (Ancha 256-128-64)"
+  },
+  "hyperparameter_refinement": {
+    "initial_parameters": {
+      "architecture": "Arch 2 (Ancha 256-128-64)",
+      "layers": [
+        256,
+        128,
+        64
+      ],
+      "alpha": 0.0001,
+      "learning_rate_init": 0.001
+    },
+    "tuned_parameters": {
+      "alpha": 0.0001,
+      "learning_rate_init": 0.001
+    },
+    "tuning_experiments": [
+      {
+        "mse": 9763073.8793,
+        "rmse": 3124.5918,
+        "mae": 1656.9102,
+        "r2": 0.981,
+        "stopped_epoch": 100,
+        "params": {
+          "alpha": 0.0001,
+          "learning_rate_init": 0.001
+        },
+        "train_time_sec": 591.26
+      },
+      {
+        "mse": 10146411.4013,
+        "rmse": 3185.3432,
+        "mae": 1751.8982,
+        "r2": 0.9803,
+        "stopped_epoch": 81,
+        "params": {
+          "alpha": 0.001,
+          "learning_rate_init": 0.001
+        },
+        "train_time_sec": 459.68
+      },
+      {
+        "mse": 12118841.2017,
+        "rmse": 3481.2126,
+        "mae": 1948.3405,
+        "r2": 0.9765,
+        "stopped_epoch": 100,
+        "params": {
+          "alpha": 0.01,
+          "learning_rate_init": 0.0005
+        },
+        "train_time_sec": 567.29
+      }
+    ]
+  },
+  "final_test_evaluation": {
+    "Random Forest": {
+      "mse": 11075331.3743,
+      "rmse": 3327.962,
+      "mae": 1667.9227,
+      "r2": 0.9785,
+      "latency_ms": 34.112,
+      "disk_size_mb": 151.26
+    },
+    "MLPRegressor_Tuned": {
+      "mse": 9863307.7071,
+      "rmse": 3140.5903,
+      "mae": 1653.0333,
+      "r2": 0.9809,
+      "latency_ms": 0.517,
+      "disk_size_mb": 1.13
+    }
+  }
+}
