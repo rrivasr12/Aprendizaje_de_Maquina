@@ -1,231 +1,143 @@
-# AirPrice ML — Plataforma de Predicción de Tarifas Aéreas, Explicabilidad SHAP y Telemetría
+# ✈️ AirPrice ML — Plataforma de Predicción de Tarifas Aéreas, Explicabilidad SHAP y Telemetría
 
-> **Curso:** Aprendizaje de Máquinas (ACIF104) — Fase 3  
+> **Curso:** Aprendizaje de Máquinas (ACIF104) — Fase 4 Consolidada Final  
 > **Proyecto:** Sistema End-to-End de Inferencia de Precios de Vuelos en India, Interpretabilidad con SHAP Real y Monitoreo Operacional  
-> **Arquitectura:** Lead DevOps & Software Architect Standard  
+> **Integrantes:** Manuel Miranda & Rodrigo Rivas  
+> **Institución:** Universidad Andrés Bello (UNAB)  
+> **Arquitectura:** Lead ML & Software Engineer Standard  
 
 ---
 
-## 📋 Resumen del Proyecto
+## 📋 Resumen Ejecutivo del Proyecto
 
-Este repositorio contiene la arquitectura completa y el código refactorizado para el sistema de predicción de tarifas aéreas. El sistema predice en tiempo real el precio continuo de pasajes aéreos en Rupias Indias (INR), Dólares Estadounidenses (USD) y Pesos Chilenos (CLP), entregando explicabilidad basada en **SHAP (SHapley Additive exPlanations) reales calculadas vía `TreeExplainer`** y exponiendo telemetría en tiempo real sobre la latencia y estado de salud de la API.
+Este repositorio contiene la arquitectura completa, modular y reproducible para la estimación precisa de tarifas aéreas sobre el conjunto de datos `Clean_Dataset.csv` (300.153 registros).
+El sistema predice en tiempo real el precio continuo de pasajes aéreos en **Rupias Indias (INR)**, **Dólares Estadounidenses (USD)** y **Pesos Chilenos (CLP)**, ofreciendo:
+- **Alternancia de Inferencia en Producción:** Soporte nativo para **Random Forest Regressor** y **Red Neuronal Profunda (MLPRegressor)** refinada.
+- **Prevención Estricta de Data Leakage:** Partición estratificada determinista (70% Train, 15% Val, 15% Test) con ajuste de `ColumnTransformer` (StandardScaler + OneHotEncoder `drop='first'`) exclusivamente sobre el conjunto de entrenamiento.
+- **Interpretabilidad Nativa:** Explicabilidad marginal mediante **SHAP (`TreeExplainer`)** sobre el modelo Random Forest entregando contribuciones monetarias exactas en cada predicción.
+- **Telemetría y Resiliencia Operacional:** Middleware de auditoría con cabecera `X-Process-Time-MS` y endpoint de telemetría `/api/metrics` cumpliendo el requerimiento de latencia RNF02 (< 200 ms).
+- **Suite de Pruebas Automatizadas:** Cobertura con `pytest backend/test_api.py` (100% aprobado).
+- **Cuaderno Técnico Consolidado:** `notebooks/analisis_s4f4_fase4_consolidado.ipynb` con todas sus celdas ejecutadas y salidas persistentes.
 
 ---
 
-## 🛠️ Matriz de Requisitos Cumplidos (100% Rúbrica Fase 3)
+## 📊 Resultados de Benchmarking y Evaluación en Test Set
 
-| ID | Categoría | Descripción del Requisito | Implementación / Evidencia | Estado |
+### 1. Benchmarking de Modelos Tradicionales (Conjunto de Validación — 45.023 muestras)
+| Modelo | R² Score | RMSE (INR) | MAE (INR) | Tiempo Entren. (s) |
+|---|:---:|:---:|:---:|:---:|
+| **Random Forest (Seleccionado)** 🏆 | **0.9786** | **₹ 3.318,92** | **₹ 1.670,05** | 26.2 s |
+| Extra Trees | 0.9766 | ₹ 3.473,03 | ₹ 1.783,95 | 37.0 s |
+| Gradient Boosting | 0.9606 | ₹ 4.500,99 | ₹ 2.647,20 | 45.2 s |
+| Ridge Regression (Baseline) | 0.9095 | ₹ 6.825,05 | ₹ 4.613,32 | 0.1 s |
+
+### 2. Benchmarking de Arquitecturas Deep Learning (MLPRegressor en Validación)
+| Arquitectura | Capas Ocultas | Época de Parada | Val R² Score | Val RMSE (INR) |
+|---|:---:|:---:|:---:|:---:|
+| **Arch 2: MLP Ancha (Seleccionada)** 🏆 | **(256, 128, 64)** | **100** | **0.9810** | **₹ 3.124,59** |
+| Arch 3: MLP Profunda | (128, 128, 64, 32) | 79 (Early Stop) | 0.9794 | ₹ 3.258,78 |
+| Arch 1: MLP Standard | (128, 64, 32) | 100 | 0.9776 | ₹ 3.394,01 |
+
+> **Refinamiento de Hiperparámetros (MLP Ancha):**  
+> Parámetros óptimos tras búsqueda de retícula: `alpha=0.0001`, `learning_rate_init=0.001` con activación ReLU y optimizador Adam.
+
+### 3. Evaluación Final en el Conjunto de Prueba Intocado (Test Set — 45.023 muestras nunca vistas)
+| Métrica Evaluada | Random Forest Regressor | Red Neuronal Profunda (MLP Tuned) |
+|---|:---:|:---:|
+| **$R^2$ Score** | **0.9785** | **0.9809** |
+| **RMSE (Error Cuadrático Medio)** | **₹ 3.327,96** | **₹ 3.140,59** |
+| **MAE (Error Absoluto Medio)** | **₹ 1.667,92** | **₹ 1.653,03** |
+| **MSE** | 11.075.331,37 | 9.863.307,71 |
+| **Latencia Media de Inferencia** | 34.11 ms / muestra | **0.52 ms / muestra** |
+| **Tamaño del Artefacto en Disco** | 151.26 MB | **1.13 MB** |
+
+*El informe completo estructurado se almacena en [`models/training_metrics.json`](file:///models/training_metrics.json).*
+
+---
+
+## 🛠️ Matriz de Requisitos Cumplidos
+
+| ID | Categoría | Descripción del Requisito | Evidencia / Archivo | Estado |
 |---|---|---|---|:---:|
-| **RF-01** | Funcional | Predicción continua del precio de pasajes aéreos. | Modelo Regresor Optimizado (`best_rf_model.joblib`). | **CUMPLIDO** |
-| **RF-02** | Preprocesamiento | Pipeline con `ColumnTransformer`: `StandardScaler` (Z-score) para variables numéricas (`duration`, `days_left`); `OneHotEncoder(drop='first')` para variables categóricas. | `scripts/train.py` y `backend/main.py`. | **CUMPLIDO** |
-| **RNF-01** | Usabilidad | Calculadora automática de duración estimada del vuelo basada en la combinación origen-destino-escalas. | Frontend UI (`frontend/app.js` & `index.html`). | **CUMPLIDO** |
-| **RNF-02** | Explicabilidad | Descomposición de variables SHAP en tiempo real servida en JSON por la API y renderizada gráficamente en Frontend. | `TreeExplainer` en `/api/explain`. | **CUMPLIDO** |
-| **RNF-03** | Blindaje Data Leakage | Ajuste exclusivo de transformadores sobre el conjunto de entrenamiento (Train 70%). | `ColumnTransformer.fit_transform(X_train)`. | **CUMPLIDO** |
-| **RNF-04** | Confiabilidad | Evaluación en conjunto de prueba intocado (15% ~45.023 muestras) garantizando $R^2 \ge 0,90$. | **Random Forest $R^2 = 0,9769$**, RMSE = ₹ 3.436. | **CUMPLIDO** |
-| **RNF-05** | Seguridad & Tipo | Validación estricta de esquema Pydantic en endpoints (rangos, tipos, enums de aerolíneas, ciudades y cabina). | `backend/main.py` (`FlightPredictionInput`). | **CUMPLIDO** |
-| **RNF-06** | Escalabilidad & Latencia | Middleware en FastAPI inyectando cabecera `X-Process-Time-MS` y endpoint `/api/metrics` con latencia promedio < 200ms. | Latencia media real $\approx 12,4\text{ ms}$. | **CUMPLIDO** |
+| **RF-01** | Funcional | Predicción continua del precio de pasajes en INR, USD y CLP. | `backend/main.py` (`/api/predict`). | **CUMPLIDO** |
+| **RF-02** | Alternancia | Soporte de inferencia configurable entre Random Forest y MLP. | Parámetro `model_type` en `/api/predict`. | **CUMPLIDO** |
+| **RF-03** | Preprocesamiento | Pipeline con `ColumnTransformer`: `StandardScaler` en continuas y `OneHotEncoder(drop='first')` en categóricas sin multicolinealidad. | `models/preprocessor.joblib`. | **CUMPLIDO** |
+| **RNF-01** | Explicabilidad | SHAP real calculado con `TreeExplainer` con valores marginales en Rupias. | `backend/main.py` (`/api/explain`). | **CUMPLIDO** |
+| **RNF-02** | Latencia & SLA | Tiempo de respuesta del servicio < 200 ms con cabecera `X-Process-Time-MS`. | Inferencia MLP ~0.52 ms, RF ~34 ms. | **CUMPLIDO** |
+| **RNF-03** | Anti-Data Leakage | Partición 70/15/15 con ajuste exclusivo sobre Train Set. | `scripts/train_and_audit.py`. | **CUMPLIDO** |
+| **RNF-04** | Robustez de Entrada | Validación Pydantic estricta con códigos HTTP 422 y 400 ante datos fuera de dominio. | `FlightPredictionInput` en `backend/main.py`. | **CUMPLIDO** |
+| **RNF-05** | Testing Integral | Suite de pruebas unitarias e integración con 100% de aprobación. | `backend/test_api.py` (9 tests OK). | **CUMPLIDO** |
 
 ---
 
-## 🚀 Guía de Instalación y Despliegue Paso a Paso
+## 🚀 Guía de Reproducción y Despliegue Local Paso a Paso
 
-### 1. Requisitos Previos del Sistema
+### 1. Requisitos Previos
+- **Python:** versión 3.11 recomendada.
+- **Git:** para clonar y versionar.
 
-- **Python:** versión 3.9, 3.10 o 3.11.
-- **Git:** para clonar o gestionar el repositorio.
-
-### 2. Creación del Entorno Virtual
-
-Crear y activar un entorno virtual limpio en la raíz del proyecto:
-
+### 2. Creación del Entorno e Instalación de Dependencias
 ```bash
-# En Windows (PowerShell):
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+# Crear entorno virtual
+python -m venv .venv
 
+# Activar entorno virtual
+# En Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
 # En Linux / macOS:
-python3 -m venv venv
-source venv/bin/activate
-```
+source .venv/bin/activate
 
-### 3. Instalación de Dependencias (`requirements.txt` Riguroso)
-
-Instalar las dependencias estrictamente necesarias sin paquetes no relacionados:
-
-```bash
-pip install --upgrade pip
+# Instalar dependencias
 pip install -r requirements.txt
 ```
 
-### 4. Ejecución del Entrenamiento Reproducible
-
-Para ejecutar todo el pipeline de análisis exploratorio (EDA), experimentación de balanceo de clases, división estricta de datos (70/15/15), evaluación de curvas de convergencia reales de Deep Learning (MLP), benchmark de modelos y exportación de artefactos optimizados:
-
+### 3. Ejecución del Pipeline de Entrenamiento y Auditoría Rigurosa
+Para ejecutar todo el flujo (limpieza, división 70/15/15, preprocesamiento sin leakage, benchmarking tradicional, benchmarking de 3 arquitecturas MLP, selección programática, tuning de hiperparámetros y evaluación única en Test Set):
 ```bash
-python scripts/train.py
+python scripts/train_and_audit.py
 ```
+*Artefactos generados en `models/`:*
+- `preprocessor.joblib`: Preprocesador de entrada (30 atributos).
+- `y_scaler.joblib`: Escalador de la variable continua objetivo para la red neuronal.
+- `best_rf_model.joblib`: Modelo ganador tradicional (Random Forest).
+- `best_mlp_model.joblib`: Modelo ganador de Deep Learning refinado (MLP 256-128-64).
+- `training_metrics.json`: Reporte exhaustivo de auditoría con todas las métricas de validación y test.
+- `feature_names.json`: Lista canónica de nombres de características.
 
-*Salidas generadas:*
-- Artefactos guardados en `models/`: `preprocessor.joblib`, `y_scaler.joblib`, `best_rf_model.joblib`, `best_mlp_model.joblib`, `feature_names.json`.
-- Gráficos exportados en `figures/`: `fig_eda_categoricas.png`, `fig_balanceo_clases.png`, `fig_curva_convergencia_dl.png`, `fig_comparacion_modelos.png`, `fig_shap_summary.png`.
-- Reportes JSON: `eda_numerical.json`, `eda_categorical.json`, `resultados_balanceo.json`, `tuning_pytorch.json`, `comparacion_modelos.json`, `shap_summary.json`.
-
-### 5. Despliegue del Sistema Completo (Backend API + Frontend Web)
-
-Para levantar de forma orquestada la API REST en Uvicorn y el servidor de archivos estáticos en el puerto 8000:
-
+### 4. Ejecución de la Suite de Pruebas Automatizadas
+Para verificar el funcionamiento correcto de todos los endpoints, modelos y validaciones:
 ```bash
-python scripts/run_system.py
+python -m pytest backend/test_api.py -v
 ```
+*Resultado esperado:* 9 pruebas pasadas con 100% de éxito.
 
-El script abrirá automáticamente la interfaz web en su navegador predeterminado: `http://127.0.0.1:8000`.
+### 5. Lanzamiento del Sistema Completo (Backend API + Frontend Web)
+Para iniciar de manera unificada la API FastAPI y la interfaz Web en `http://127.0.0.1:8000`:
+```bash
+python run_system.py
+```
+La aplicación abrirá automáticamente el navegador web para realizar predicciones interactivas y explorar las explicaciones SHAP.
 
 ---
 
-## 🌐 Especificación de Endpoints de la API REST
+## 📖 Cuadernos Jupyter del Proyecto (`notebooks/`)
 
-### 1. `GET /api/health`
-Verifica la disponibilidad y el estado de carga de los artefactos del modelo.
-
-- **Respuesta:**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2026-08-07 22:45:00",
-  "models_loaded": true
-}
-```
-
-### 2. `POST /api/predict`
-Calcula la predicción continua de tarifa aérea para el itinerario ingresado.
-
-- **Cuerpo de la Petición (Payload JSON):**
-```json
-{
-  "airline": "Vistara",
-  "source_city": "Delhi",
-  "departure_time": "Morning",
-  "stops": "one",
-  "arrival_time": "Night",
-  "destination_city": "Mumbai",
-  "class": "Economy",
-  "duration": 6.5,
-  "days_left": 15
-}
-```
-
-- **Respuesta JSON:**
-```json
-{
-  "predicted_price_inr": 5953.0,
-  "formatted_price": "₹ 5.953,00",
-  "predicted_price_usd": 71.44,
-  "predicted_price_clp": 68460.0,
-  "model_used": "Random Forest Regressor (Tuned)",
-  "latency_ms": 12.4,
-  "status": "success"
-}
-```
-
-### 3. `POST /api/explain` (SHAP Real vía `TreeExplainer`)
-Devuelve la descomposición dinámica de valores SHAP calculados directamente sobre la muestra preprocesada.
-
-- **Respuesta JSON:**
-```json
-{
-  "base_price_inr": 20889.0,
-  "predicted_price_inr": 5953.0,
-  "contributions": [
-    {
-      "feature": "class_Economy",
-      "contribution": -14250.5,
-      "direction": "decreases_price"
-    },
-    {
-      "feature": "days_left",
-      "contribution": 1850.2,
-      "direction": "increases_price"
-    },
-    {
-      "feature": "duration",
-      "contribution": 420.3,
-      "direction": "increases_price"
-    }
-  ]
-}
-```
-
-### 4. `GET /api/metrics` (Telemetría & Monitoreo)
-Expone las métricas operacionales de rendimiento del servidor y el modelo.
-
-- **Respuesta JSON:**
-```json
-{
-  "total_predictions": 12,
-  "total_explanations": 8,
-  "avg_latency_ms": 12.4,
-  "min_latency_ms": 8.1,
-  "max_latency_ms": 24.5,
-  "target_latency_rnf02_met": true,
-  "model_metadata": {
-    "primary_model": "Random Forest Regressor (Tuned)",
-    "r2_score": 0.9769,
-    "rmse_inr": 3436.21,
-    "mae_inr": 1784.55
-  },
-  "system_health": "Optimal",
-  "uptime_seconds": 345.2
-}
-```
+| Cuaderno | Descripción | Estado |
+|---|---|:---:|
+| [`analisis_s4f4_fase4_consolidado.ipynb`](notebooks/analisis_s4f4_fase4_consolidado.ipynb) | **Cuaderno Consolidado Final:** Abarca todo el flujo end-to-end (EDA IQR, prevención de leakage, balanceo de clases, benchmark ML, benchmark 3 DL MLPs, selección programática, tuning, test set intocado y explicabilidad SHAP). | **Ejecutado & Persistido** |
+| [`analisis_s4f4_fase4.ipynb`](notebooks/analisis_s4f4_fase4.ipynb) | Cuaderno de la entrega Fase 4. | Completado |
+| [`analisis_s9s2_fase3.ipynb`](notebooks/analisis_s9s2_fase3.ipynb) | Cuaderno de análisis experimental Fase 3. | Completado |
+| [`analisis_s3f3_fase2.ipynb`](notebooks/analisis_s3f3_fase2.ipynb) | Cuaderno de EDA y modelos preliminares Fase 2. | Completado |
+| [`analisis_s2f2_fase1.ipynb`](notebooks/analisis_s2f2_fase1.ipynb) | Cuaderno exploratorio inicial Fase 1. | Completado |
 
 ---
 
-## 📁 Estructura del Repositorio
+## 🌐 Endpoints Principales de la API REST
 
-```text
-Aprendizaje_de_Maquina-master/
-├── backend/
-│   ├── main.py              # API REST FastAPI con /api/predict, /api/explain (SHAP) y /api/metrics
-│   └── test_api.py          # Pruebas unitarias automatizadas para la API
-├── frontend/
-│   ├── index.html           # Interfaz web responsiva con pestañas de Cotizador, SHAP y Telemetría
-│   ├── style.css            # Sistema de diseño con glassmorphism, gradientes y micro-animaciones
-│   └── app.js               # Lógica del cliente, calculador de duración y renderización SHAP
-├── models/
-│   ├── best_rf_model.joblib # Modelo Random Forest Tuned (R² = 0.9769)
-│   ├── best_mlp_model.joblib# Modelo Red Neuronal MLP Tuned
-│   ├── preprocessor.joblib  # ColumnTransformer ajustado en conjunto Train
-│   ├── y_scaler.joblib      # StandardScaler para el target en modelos Deep Learning
-│   └── feature_names.json   # Lista de características transformadas OneHotEncoder/StandardScaler
-├── notebooks/
-│   ├── analisis_s2f2_fase1.ipynb
-│   ├── analisis_s3f3_fase2.ipynb
-│   ├── analisis_s4f4_fase3.ipynb
-│   ├── analisis_s4f4_fase4.ipynb
-│   └── analisis_s9s2_fase3.ipynb
-├── scripts/
-│   ├── train.py             # Script ejecutable de entrenamiento reproducible end-to-end
-│   └── run_system.py        # Script orquestador del sistema (FastAPI + Frontend)
-├── Clean_Dataset.csv        # Dataset original de 300.153 registros de vuelos
-├── requirements.txt         # Dependencias exactas y optimizadas del proyecto
-├── run_system.py            # Launcher de nivel raíz
-└── README.md                # Documentación oficial del proyecto
-```
-
----
-
-## 🏆 Resultados del Benchmark de Modelos en Test Set (15% Intocado — 45.023 Muestras)
-
-| Modelo / Arquitectura | Tipo | RMSE (₹) | MAE (₹) | R² Score | Estado RNF-04 |
-|---|---|---|---|:---:|:---:|
-| **Random Forest Regressor (Tuned)** ⭐ | Machine Learning | **₹ 3.436,21** | **₹ 1.784,55** | **0,9769** | **Excelente** |
-| Extra Trees Regressor (Tuned) | Machine Learning | ₹ 3.544,58 | ₹ 1.863,95 | 0,9754 | Excelente |
-| Red Neuronal Profunda (MLP Standard) | Deep Learning | ₹ 3.545,16 | ₹ 1.956,02 | 0,9754 | Excelente |
-| Gradient Boosting Regressor (Tuned) | Machine Learning | ₹ 4.062,29 | ₹ 2.361,06 | 0,9677 | Excelente |
-| Ridge Regression (Baseline) | ML Lineal | ₹ 6.666,65 | ₹ 4.528,72 | 0,9129 | Cumplido |
-
----
-
-## 👨‍💻 Créditos y Autores
-
-Desarrollado para la asignatura **Aprendizaje de Máquinas (ACIF104)** — Universidad Andrés Bello (UNAB).
+1. **`GET /api/health`**: Estado del servicio y confirmación de carga de modelos.
+2. **`POST /api/predict`**: Inferencia de tarifa aérea (`model_type="rf"` o `"mlp"`).
+   - Recibe: `airline`, `source_city`, `departure_time`, `stops`, `arrival_time`, `destination_city`, `class`, `duration`, `days_left`, `model_type`.
+   - Entrega: precio predicho en INR, USD y CLP, nombre del modelo utilizado y latencia en ms.
+3. **`POST /api/explain`**: Interpretabilidad con SHAP `TreeExplainer` sobre Random Forest.
+   - Entrega: `base_price_inr`, `predicted_price_inr` y top 10 atributos de mayor impacto marginal.
+4. **`GET /api/metrics`**: Métricas operacionales en vivo (total predicciones, latencia promedio, percentiles, cumplimiento RNF02).
